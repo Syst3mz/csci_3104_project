@@ -1,15 +1,14 @@
 mod corpus;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::path::PathBuf;
-use std::slice::Iter;
 use std::time::Instant;
 use rand::{Rng};
 use clap::{Parser, Subcommand, Args, ValueEnum};
 use indicatif::ProgressBar;
-use crate::corpus::{Corpus, KnownLength};
+use crate::corpus::{Corpus};
 
 #[derive(Parser, Debug)]
 struct Config {
@@ -99,10 +98,6 @@ fn main() {
             let data= get_minimum_edges(&corpus);
             let now = Instant::now();
 
-            for datum in data {
-                println!("{:?}", datum)
-            }
-
             println!("Finished crunching dataset. took {}ms", (now - then).as_millis());
         }
         Commands::On { .. } => {}
@@ -129,7 +124,6 @@ fn get_minimum_edges<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>)
     -> Vec<Vec<(&'a HashSet<T>, &'a HashSet<T>)>>
     where T: Eq, T:Hash, T:Clone
     {
-
         let mut ret:Vec<Vec<(&'a HashSet<T>, &'a HashSet<T>)>> = Vec::new();
         let bar = ProgressBar::new(
             corpus.data.iter()
@@ -171,22 +165,6 @@ where T: Eq, T:Hash, T:Clone
                 ret.push(set)
             };
         }
-    }
-
-    ret
-}
-
-struct Tag<T> {
-    number:usize,
-    item:T
-}
-
-fn get_superset_table<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>) -> Vec<Vec<&'a HashSet<T>>>
-    where T: Eq, T:Hash, T:Clone
-{
-    let mut ret:Vec<Vec<&HashSet<T>>> = Vec::new();
-    for row_idx in 0..corpus.data {
-
     }
 
     ret
