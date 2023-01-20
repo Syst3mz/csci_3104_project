@@ -1,6 +1,6 @@
 mod corpus;
+mod almost_set;
 
-use std::collections::{HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::path::PathBuf;
@@ -8,7 +8,8 @@ use std::time::Instant;
 use rand::{Rng};
 use clap::{Parser, Subcommand, Args, ValueEnum};
 use indicatif::ProgressBar;
-use crate::corpus::{Corpus};
+use crate::almost_set::AlmostSet;
+use crate::corpus::{Corpus, KnownLength};
 
 #[derive(Parser, Debug)]
 struct Config {
@@ -69,21 +70,21 @@ fn main() {
             let then = Instant::now();
             let corpus = match command.mode {
                 DebugMode::Run(run_type) => {
-                    let mut corpus: Corpus<HashSet<usize>> = Corpus::new();
+                    let mut corpus: Corpus<AlmostSet<usize>> = Corpus::new();
                     match run_type.mode {
                         RunType::OneTo4=> {
-                            corpus.add(HashSet::from([1]));
-                            corpus.add(HashSet::from([1,2]));
-                            corpus.add(HashSet::from([1,2,3]));
-                            corpus.add(HashSet::from([1,2,4]));
+                            corpus.add(AlmostSet::new(vec![1]));
+                            corpus.add(AlmostSet::new(vec![1,2]));
+                            corpus.add(AlmostSet::new(vec![1,2,3]));
+                            corpus.add(AlmostSet::new(vec![1,2,4]));
                         }
                         RunType::Sample => {
-                            corpus.add(HashSet::from([1,2]));
-                            corpus.add(HashSet::from([1, 2, 3]));
-                            corpus.add(HashSet::from([1, 2, 3, 4]));
-                            corpus.add(HashSet::from([1, 2, 3, 4, 5]));
-                            corpus.add(HashSet::from([2]));
-                            corpus.add(HashSet::from([2, 3]));
+                            corpus.add(AlmostSet::new(vec![1,2]));
+                            corpus.add(AlmostSet::new(vec![1, 2, 3]));
+                            corpus.add(AlmostSet::new(vec![1, 2, 3, 4]));
+                            corpus.add(AlmostSet::new(vec![1, 2, 3, 4, 5]));
+                            corpus.add(AlmostSet::new(vec![2]));
+                            corpus.add(AlmostSet::new(vec![2, 3]));
                         }
                     }
                     corpus
@@ -105,8 +106,8 @@ fn main() {
 
 }
 
-fn make_random_corpus(max_len: usize, num: usize) -> Corpus<HashSet<usize>> {
-    let mut ret:Corpus<HashSet<usize>> = Corpus::new();
+fn make_random_corpus(max_len: usize, num: usize) -> Corpus<AlmostSet<usize>> {
+    let mut ret:Corpus<AlmostSet<usize>> = Corpus::new();
     let mut rng = rand::thread_rng();
     for _i in 0..num {
         let mut set:Vec<usize> = Vec::new();
@@ -114,17 +115,17 @@ fn make_random_corpus(max_len: usize, num: usize) -> Corpus<HashSet<usize>> {
             set.push(x);
         }
 
-        ret.add(HashSet::from_iter(set))
+        ret.add(AlmostSet::new(set))
     }
 
     ret
 }
 
-fn get_minimum_edges<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>)
-    -> Vec<Vec<(&'a HashSet<T>, &'a HashSet<T>)>>
-    where T: Eq, T:Hash, T:Clone
+fn get_minimum_edges<'a, T: Debug>(corpus: &'a Corpus<AlmostSet<T>>)
+    -> Vec<(&'a AlmostSet<T>, &'a AlmostSet<T>)>
+    where T: Eq, T:Hash, T:Clone, T:Ord
     {
-        let mut ret:Vec<Vec<(&'a HashSet<T>, &'a HashSet<T>)>> = Vec::new();
+        let mut ret: Vec<(&'a AlmostSet<T>, &'a AlmostSet<T>)> = Vec::new();
         let bar = ProgressBar::new(
             corpus.data.iter()
                 .map(|x| x.len() as u64)
@@ -133,7 +134,9 @@ fn get_minimum_edges<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>)
             for set in datum {
                 let x = get_minimum_edges_for(corpus, set);
                 if !x.is_empty() {
-                    ret.push(x);
+                    for x in x {
+                        ret.push(x);
+                    }
                 }
                 bar.inc(1);
             }
@@ -142,9 +145,9 @@ fn get_minimum_edges<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>)
         ret
     }
 
-fn get_minimum_edges_for<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>, element: &'a HashSet<T>)
-    -> Vec<(&'a HashSet<T>, &'a HashSet<T>)>
-    where T: Eq, T:Hash, T:Clone
+fn get_minimum_edges_for<'a, T: Debug>(corpus: &'a Corpus<AlmostSet<T>>, element: &'a AlmostSet<T>)
+    -> Vec<(&'a AlmostSet<T>, &'a AlmostSet<T>)>
+    where T: Eq, T:Hash, T:Clone, T:Ord
 {
     let candidates = get_supersets(corpus, element);
 
@@ -154,10 +157,10 @@ fn get_minimum_edges_for<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>, element: 
         .collect()
 }
 
-fn get_supersets<'a, T: Debug>(corpus: &'a Corpus<HashSet<T>>, element: &'a HashSet<T>) -> Vec<&'a HashSet<T>>
-where T: Eq, T:Hash, T:Clone
+fn get_supersets<'a, T: Debug>(corpus: &'a Corpus<AlmostSet<T>>, element: &'a AlmostSet<T>) -> Vec<&'a AlmostSet<T>>
+where T: Eq, T:Hash, T:Clone, T:Ord
 {
-    let mut ret:Vec<&HashSet<T>> = Vec::new();
+    let mut ret:Vec<&AlmostSet<T>> = Vec::new();
     let candidate_sets = corpus.get_above(element.len());
     for candidate in candidate_sets {
         for set in candidate {
