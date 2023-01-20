@@ -2,7 +2,9 @@ mod corpus;
 mod almost_set;
 
 use std::fmt::Debug;
+use std::fs::File;
 use std::hash::Hash;
+use std::io::Read;
 use std::path::PathBuf;
 use std::time::Instant;
 use rand::{Rng};
@@ -14,16 +16,16 @@ use crate::corpus::{Corpus, KnownLength};
 #[derive(Parser, Debug)]
 struct Config {
     #[command(subcommand)]
-    command: Commands
+    command: Commands,
+    #[arg(short)]
+    out_file: PathBuf
 }
 
 #[derive(Debug, Subcommand)]
 enum Commands {
     Debug(DebugCommand),
-
     On {
         in_file: PathBuf,
-        out_file: PathBuf
     }
 }
 
@@ -54,23 +56,23 @@ enum RunType {
 #[derive(Debug, Args, Clone)]
 struct  GenerateArgs {
     #[arg(required = true)]
-    length: usize,
+    length: u16,
 
     #[arg(required = true)]
-    entries: usize,
+    entries: u16,
 }
 
 
 
 fn main() {
     let config = Config::parse();
-    match config.command {
+    println!("Initializing dataset");
+    let then = Instant::now();
+    let corpus = match config.command {
         Commands::Debug(command) => {
-            println!("Initializing dataset");
-            let then = Instant::now();
-            let corpus = match command.mode {
+            match command.mode {
                 DebugMode::Run(run_type) => {
-                    let mut corpus: Corpus<AlmostSet<usize>> = Corpus::new();
+                    let mut corpus: Corpus<AlmostSet<u16>> = Corpus::new();
                     match run_type.mode {
                         RunType::OneTo4=> {
                             corpus.add(AlmostSet::new(vec![1]));
@@ -92,26 +94,44 @@ fn main() {
                 DebugMode::Generate(args) => {
                     make_random_corpus(args.length, args.entries)
                 }
-
-            };
-            println!("Finished initializing dataset, took {}ms.", (Instant::now() - then).as_millis());
-            let then = Instant::now();
-            let data= get_minimum_edges(&corpus);
-            let now = Instant::now();
-
-            println!("Finished crunching dataset. took {}ms", (now - then).as_millis());
+            }
         }
-        Commands::On { .. } => {}
-    }
+        Commands::On { in_file } => {
+            read_into_corpus(in_file)
+        }
+    };
+    println!("Finished initializing dataset, took {}ms. Crunching dataset.", (Instant::now() - then).as_millis());
+    let then = Instant::now();
+    let data= get_minimum_edges(&corpus);
+    println!("Finished crunching dataset, took {}ms. Writing data.", ( Instant::now() - then).as_millis());
+    let then = Instant::now();
+
 
 }
 
-fn make_random_corpus(max_len: usize, num: usize) -> Corpus<AlmostSet<usize>> {
-    let mut ret:Corpus<AlmostSet<usize>> = Corpus::new();
+fn read_into_corpus(path: PathBuf) -> Corpus<AlmostSet<u16>> {
+    let mut ret:Corpus<AlmostSet<u16>> = Corpus::new();
+    let mut file = File::open(&path).expect(&format!("Unable to open file at {:?}", &path));
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).expect(&format!("Unable to read from file file at {:?}", &path));
+    for line in contents.lines() {
+        let mut corp_line: Vec<u16> = Vec::new();
+        for number in line.split(" ") {
+            corp_line.push(number.parse::<u16>().expect("Unable to read numbers."));
+        }
+
+        ret.add(AlmostSet::new(corp_line));
+    }
+
+    ret
+}
+
+fn make_random_corpus(max_len: u16, num: u16) -> Corpus<AlmostSet<u16>> {
+    let mut ret:Corpus<AlmostSet<u16>> = Corpus::new();
     let mut rng = rand::thread_rng();
     for _i in 0..num {
-        let mut set:Vec<usize> = Vec::new();
-        for x in 0_usize..rng.gen_range(1..max_len+1) {
+        let mut set:Vec<u16> = Vec::new();
+        for x in 0_u16..rng.gen_range(1..max_len+1) {
             set.push(x);
         }
 
