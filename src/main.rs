@@ -2,9 +2,8 @@ mod corpus;
 mod almost_set;
 
 use std::fmt::Debug;
-use std::fs::File;
+use std::fs;
 use std::hash::Hash;
-use std::io::Read;
 use std::path::PathBuf;
 use std::time::Instant;
 use rand::{Rng};
@@ -105,15 +104,22 @@ fn main() {
     let data= get_minimum_edges(&corpus);
     println!("Finished crunching dataset, took {}ms. Writing data.", ( Instant::now() - then).as_millis());
     let then = Instant::now();
+    write_to_output(data, config.out_file);
+    println!("Finished! (took {}ms)", (Instant::now() - then).as_millis())
+}
 
 
+fn write_to_output(data: Vec<(&AlmostSet<u16>, &AlmostSet<u16>)>, path: PathBuf) {
+    let mut ret = String::new();
+    for edge in data {
+        ret.push_str(&format!("{}->{}\n", edge.0.to_string(), edge.1.to_string()))
+    }
+    fs::write(&path, ret).expect(&format!("Unable to write to {:?}", &path));
 }
 
 fn read_into_corpus(path: PathBuf) -> Corpus<AlmostSet<u16>> {
     let mut ret:Corpus<AlmostSet<u16>> = Corpus::new();
-    let mut file = File::open(&path).expect(&format!("Unable to open file at {:?}", &path));
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).expect(&format!("Unable to read from file file at {:?}", &path));
+    let contents = fs::read_to_string(&path).expect(&format!("Unable to read from file file at {:?}", &path));
     for line in contents.lines() {
         let mut corp_line: Vec<u16> = Vec::new();
         for number in line.split(" ") {

@@ -6,7 +6,6 @@ pub struct AlmostSet<T> {
 }
 
 impl<T: PartialEq+Ord> AlmostSet<T> {
-
     pub fn is_subset(&self, other: &AlmostSet<T>) -> bool {
         if other.len() >= self.internal_vec.len() {
             for i in 0..self.internal_vec.len() {
@@ -23,6 +22,16 @@ impl<T: PartialEq+Ord> AlmostSet<T> {
     pub fn new(mut internal_vec: Vec<T>) -> Self {
         internal_vec.sort();
         Self { internal_vec }
+    }
+}
+
+impl<T: ToString> ToString for AlmostSet<T> {
+    fn to_string(&self) -> String {
+        let mut s: String = String::new();
+        for item in &self.internal_vec {
+            s.push_str(&format!("{}, ", item.to_string()))
+        }
+        s[..s.len() - 2].to_string()
     }
 }
 
