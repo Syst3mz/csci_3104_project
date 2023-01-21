@@ -1,18 +1,28 @@
 use crate::corpus::KnownLength;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AlmostSet<T> {
     internal_vec: Vec<T>
 }
 
-impl<T: PartialEq+Ord> AlmostSet<T> {
+impl<T: PartialEq+Ord+PartialEq> AlmostSet<T> {
     pub fn is_subset(&self, other: &AlmostSet<T>) -> bool {
         if other.len() >= self.internal_vec.len() {
-            for i in 0..self.internal_vec.len() {
-                if self.internal_vec[i] != other.internal_vec[i] {
-                    return false;
-                }
+            let first_idx = get_first_idx(self, other);
+            if let None = first_idx {
+                return false;
             }
+
+            let mut other_idx = first_idx.unwrap()+1;
+            let mut idx = 1_usize;
+            while other_idx < other.len() && idx < self.len() {
+                if self.internal_vec[idx] != other.internal_vec[other_idx] {
+                    return false
+                }
+                other_idx += 1;
+                idx += 1;
+            }
+
             return true;
         }
         return false;
@@ -23,6 +33,15 @@ impl<T: PartialEq+Ord> AlmostSet<T> {
         internal_vec.sort();
         Self { internal_vec }
     }
+}
+
+fn get_first_idx<T: PartialEq + Ord + PartialEq>(a: &AlmostSet<T>, b: &AlmostSet<T>) -> Option<usize> {
+    for i in 0..b.len() {
+        if a.internal_vec[0] == b.internal_vec[i] {
+            return Some(i);
+        }
+    }
+    return None;
 }
 
 impl<T: ToString> ToString for AlmostSet<T> {

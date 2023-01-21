@@ -1,5 +1,6 @@
 mod corpus;
 mod almost_set;
+mod bitset;
 
 use std::fmt::Debug;
 use std::fs;
@@ -184,17 +185,47 @@ fn get_minimum_edges_for<'a, T: Debug>(corpus: &'a Corpus<AlmostSet<T>>, element
 }
 
 fn get_supersets<'a, T: Debug>(corpus: &'a Corpus<AlmostSet<T>>, element: &'a AlmostSet<T>) -> Vec<&'a AlmostSet<T>>
-where T: Eq, T:Hash, T:Clone, T:Ord
+    where T: Eq, T:Hash, T:Clone, T:Ord
 {
-    let mut ret:Vec<&AlmostSet<T>> = Vec::new();
-    let candidate_sets = corpus.get_above(element.len());
-    for candidate in candidate_sets {
-        for set in candidate {
-            if element.is_subset(set) {
-                ret.push(set)
-            };
-        }
+    corpus.get_above(element.len()).filter(|x| element.is_subset(*x)).collect::<Vec<&'a AlmostSet<T>>>()
+}
+
+#[cfg(test)]
+pub mod test {
+    use crate::almost_set::AlmostSet;
+    use crate::corpus::Corpus;
+    use crate::get_supersets;
+
+    fn build_corpus() -> Corpus<AlmostSet<u16>> {
+        let mut corpus = Corpus::<AlmostSet<u16>>::new();
+        corpus.add(AlmostSet::new(vec![1, 2, 3, 5]));
+        corpus.add(AlmostSet::new(vec![1, 2, 3, 5, 11]));
+        corpus.add(AlmostSet::new(vec![1, 2, 3, 5, 16, 17]));
+        corpus
     }
 
-    ret
+    #[test]
+    fn check_superset_1() {
+        let corpus = build_corpus();
+        assert_eq!(get_supersets(&corpus, &AlmostSet::<u16>::new(vec![1, 2])),
+                    vec![
+                        &AlmostSet::new(vec![1, 2, 3]),
+                        &AlmostSet::new(vec![1, 2, 3, 4]),
+                        &AlmostSet::new(vec![1, 2, 3, 4, 5]),
+                    ])
+    }
+
+    #[test]
+    fn check_superset_2() {
+        let corpus = build_corpus();
+        assert_eq!(get_supersets(&corpus, &AlmostSet::<u16>::new(vec![2])),
+                   vec![
+                       &AlmostSet::new(vec![1, 2]),
+                       &AlmostSet::new(vec![1, 2, 3]),
+                       &AlmostSet::new(vec![1, 2, 3, 4]),
+                       &AlmostSet::new(vec![1, 2, 3, 4, 5]),
+                       &AlmostSet::new(vec![2,4]),
+                       &AlmostSet::new(vec![2, 3]),
+                   ])
+    }
 }

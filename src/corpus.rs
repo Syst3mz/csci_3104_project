@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::fmt::Debug;
+use std::iter::{Flatten};
 use std::slice::Iter;
 
 #[derive(Debug)]
@@ -24,8 +25,8 @@ impl<T: Debug+KnownLength> Corpus<T> {
         self.data[item.len() - 1].push(item)
     }
 
-    pub fn get_above(&self, n:usize) -> Iter<'_, Vec<T>> {
-        self.data[n..].iter()
+    pub fn get_above(&self, n:usize) -> Flatten<Iter<'_, Vec<T>>> {
+        self.data[n..].iter().flatten()
     }
 }
 
