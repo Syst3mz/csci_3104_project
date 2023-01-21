@@ -50,10 +50,10 @@ impl Bitset {
     }
 
     pub fn is_subset(&self, other: &Bitset) -> bool {
-        if other.len() < self.len() {
+        if other.len() < self.len() || other.internal.len() < self.internal.len() {
             return false
         }
-        (0..self.len()).all(|i| self.internal[i] & other.internal[i] == self.internal[i])
+        (0..self.internal.len()).all(|i| self.internal[i] & other.internal[i] == self.internal[i])
     }
 }
 
