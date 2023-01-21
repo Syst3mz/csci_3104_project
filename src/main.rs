@@ -1,3 +1,5 @@
+#![feature(portable_simd)]
+
 mod corpus;
 mod almost_set;
 mod bitset;
@@ -12,6 +14,7 @@ use clap::{Parser, Subcommand, Args, ValueEnum};
 use indicatif::ProgressBar;
 use crate::almost_set::AlmostSet;
 use crate::corpus::{Corpus, KnownLength};
+
 
 #[derive(Parser, Debug)]
 struct Config {
