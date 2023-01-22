@@ -1,9 +1,14 @@
+#[doc(inline)]
 use std::ops::Deref;
 use crate::corpus::KnownLength;
 
 #[derive(Debug)]
+
+/// A simple helper struct which stores a String alongside the interal value.
 pub struct StringWrapped<T> {
+    /// The "payload" is the string held
     pub(crate) payload: String,
+    /// What this struct is wrapping around.
     pub(crate) internal: T
 }
 
