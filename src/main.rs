@@ -4,6 +4,7 @@
 mod corpus;
 mod bitset;
 mod string_wrapped;
+mod set_trie;
 
 // everything prefixed by std is from the rust standard library
 use std::fmt::Debug;
@@ -74,7 +75,8 @@ struct RunArgs {
 #[derive(Debug, ValueEnum, Clone)]
 enum RunType {
     OneTo4,
-    Sample
+    Sample,
+    ExtendedSample,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -122,6 +124,16 @@ fn main() {
                             corpus.add(StringWrapped {payload: String::from("1, 2, 3, 4, 5"), internal: builder.add(vec![1, 2, 3, 4, 5])});
                             corpus.add(StringWrapped {payload: String::from("2"), internal: builder.add(vec![2])});
                             corpus.add(StringWrapped {payload: String::from("2, 3"), internal: builder.add(vec![2, 3])});
+                        }
+                        RunType::ExtendedSample => {
+                            corpus.add(StringWrapped {payload: String::from("1, 2"), internal: builder.add(vec![1, 2])});
+                            corpus.add(StringWrapped {payload: String::from("1, 2, 3"), internal: builder.add(vec![1,2 ,3])});
+                            corpus.add(StringWrapped {payload: String::from("1, 2, 3, 4"), internal: builder.add(vec![1, 2, 3, 4])});
+                            corpus.add(StringWrapped {payload: String::from("1, 2, 3, 4, 5"), internal: builder.add(vec![1, 2, 3, 4, 5])});
+                            corpus.add(StringWrapped {payload: String::from("2"), internal: builder.add(vec![2])});
+                            corpus.add(StringWrapped {payload: String::from("2, 3"), internal: builder.add(vec![2, 3])});
+                            corpus.add(StringWrapped {payload: String::from("2, 4, 5"), internal: builder.add(vec![2, 4, 5])});
+                            corpus.add(StringWrapped {payload: String::from("2, 6, 7"), internal: builder.add(vec![2, 6, 7])});
                         }
                     }
                     corpus
@@ -233,7 +245,7 @@ fn get_minimum_edges<'a>(corpus: &'a Corpus<StringWrapped<Bitset>>)
                 if !x.is_empty() {
                     // push all elements of x
                     for x in x {
-                        ret.push(x);
+                        ret.push((set, x));
                     }
                 }
                 // let the progress bar know it can increment
@@ -247,29 +259,29 @@ fn get_minimum_edges<'a>(corpus: &'a Corpus<StringWrapped<Bitset>>)
 
 /// returns the vector of all minimum edges for a element.
 fn get_minimum_edges_for<'a>(corpus: &'a Corpus<StringWrapped<Bitset>>, element: &'a StringWrapped<Bitset>)
-    -> Vec<(&'a StringWrapped<Bitset>, &'a StringWrapped<Bitset>)>
+                             -> Vec<&'a StringWrapped<Bitset>>
 {
     let candidates = get_supersets(corpus, element);
-
+    let mut found:Vec<&StringWrapped<Bitset>> = Vec::new();
     // turn candidates into an iterator for rust to make them fast
-    candidates.iter()
-        // filter only for candidates whose length <= to the minium length present in candidates
-        .filter(|x| x.len() <= candidates[0].len())
-        // turn them into an edge
-        .map(|x| (element, *x))
-        // turn that back into an array for later processing
-        .collect()
+    for candidate in candidates {
+        let mut in_set = found.iter().any(|x| x.is_subset(candidate));
+
+        if !in_set {
+            found.push(candidate)
+        }
+    }
+
+    found
 }
 
 /// returns the supersets of a given element in the corpus
-fn get_supersets<'a>(corpus: &'a Corpus<StringWrapped<Bitset>>, element: &'a StringWrapped<Bitset>) -> Vec<&'a StringWrapped<Bitset>>
+fn get_supersets<'a>(corpus: &'a Corpus<StringWrapped<Bitset>>, element: &'a StringWrapped<Bitset>) -> impl Iterator<Item=&'a StringWrapped<Bitset>>
 {
     // get all elements in the corpus whose length is longer than element's length
     corpus.get_above(element.len())
         // filter this result to only be those elements of the corpus which are a superset of element
         .filter(|x| element.is_subset(*x))
-        // turn it into a vector for later processing
-        .collect::<Vec<&'a StringWrapped<Bitset>>>()
 }
 
 
